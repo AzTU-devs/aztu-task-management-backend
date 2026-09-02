@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:kanban;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  mail:
+    host: localhost
+    port: 3025
+
+app:
+  jwt:
+    secret: test-only-secret-key-long-enough-for-hmac-sha256-0123456789abcdef
+    expiration-hours: 1
+  mail:
+    enabled: false
+  seed:
+    demo-data: true
+  admin:
+    email: admin@aztu.edu.az
+    password: Admin123!
+
+logging:
+  level:
+    org.hibernate.SQL: WARN
