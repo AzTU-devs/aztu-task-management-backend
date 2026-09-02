@@ -13,6 +13,7 @@ import az.aztu.kanban.repository.BoardRepository;
 import az.aztu.kanban.repository.PlatformRepository;
 import az.aztu.kanban.repository.TaskRepository;
 import az.aztu.kanban.repository.UserRepository;
+import az.aztu.kanban.service.PasswordGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +43,7 @@ public class DataSeeder implements CommandLineRunner {
     private final TaskRepository taskRepository;
     private final PasswordEncoder passwordEncoder;
     private final BootstrapProperties bootstrapProperties;
+    private final PasswordGenerator passwordGenerator;
 
     @Value("${app.seed.demo-data}")
     private boolean seedDemoData;
@@ -94,12 +96,17 @@ public class DataSeeder implements CommandLineRunner {
 
         log.info("Demo workspace ready: {} platforms, {} boards, {} tasks",
                 platformRepository.count(), boardRepository.count(), taskRepository.count());
+        log.info("Demo people were created with random passwords and cannot be signed in as. "
+                + "Use Users -> reset password to issue one, or set SEED_DEMO_DATA=false to skip them.");
     }
 
     /**
-     * Creates every configured administrator that does not exist yet. An account that
-     * already exists is never overwritten - its password stays untouched - but it is
-     * promoted to ADMIN and reactivated if it was not an administrator before.
+     * Creates every configured administrator that does not exist yet.
+     *
+     * An account that already exists is never overwritten: its password stays untouched and,
+     * crucially, a deactivated account stays deactivated. Re-enabling it here would silently
+     * undo an offboarding on the next restart while the old password still worked. Only a
+     * still-active account that is not an administrator yet gets promoted.
      */
     private List<User> ensureBootstrapAdmins() {
         List<User> admins = new ArrayList<>();
@@ -114,9 +121,13 @@ public class DataSeeder implements CommandLineRunner {
 
             User existing = userRepository.findByEmailIgnoreCase(email).orElse(null);
             if (existing != null) {
-                if (existing.getRole() != Role.ADMIN || !existing.isActive()) {
+                if (!existing.isActive()) {
+                    log.warn("Bootstrap slot {} points at a deactivated account - leaving it deactivated. "
+                            + "Clear that slot in .env if the person has left.", email);
+                    continue;
+                }
+                if (existing.getRole() != Role.ADMIN) {
                     existing.setRole(Role.ADMIN);
-                    existing.setActive(true);
                     userRepository.save(existing);
                     log.info("Existing account promoted to administrator: {}", email);
                 }
@@ -149,7 +160,11 @@ public class DataSeeder implements CommandLineRunner {
             user.setTitle(title);
             user.setDepartment(department);
             user.setAvatarColor(color);
-            user.setPasswordHash(passwordEncoder.encode("Aztu2024!"));
+            // A password that exists in tracked source would be a real login for anyone who
+            // reads the repository. These demo people are assignees, not accounts to sign in
+            // as: give them an unguessable secret nobody holds. An administrator can issue a
+            // real password from Users -> reset password if one of them should become usable.
+            user.setPasswordHash(passwordEncoder.encode(passwordGenerator.generate(24)));
             user.setMustChangePassword(true);
             user.setActive(true);
             return userRepository.save(user);

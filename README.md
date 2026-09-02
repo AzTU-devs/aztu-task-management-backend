@@ -69,7 +69,14 @@ and duplicate addresses are ignored with a warning.
 
 * An account that **does not exist** is created as `ADMIN` with the configured password.
 * An account that **already exists** is never overwritten — its password is left alone.
-  It is only promoted to `ADMIN` and reactivated if it was not an administrator yet.
+  A still-active account is promoted to `ADMIN` if it was not one yet.
+* A **deactivated** account stays deactivated. Re-enabling it here would silently undo an
+  offboarding on the next restart while the old password still worked, so the slot is
+  skipped with a warning instead.
+
+> **Offboarding an administrator:** deactivate them in *Users*, **and clear their slot in
+> `.env`**. Leaving the slot in place is harmless while they stay deactivated, but it will
+> keep logging a warning on every boot.
 
 > Set the passwords **before the first start**. Because existing accounts are never
 > overwritten, changing `ADMIN_PASSWORD` later has no effect. To recover from a typo,
@@ -78,15 +85,20 @@ and duplicate addresses are ignored with a warning.
 > ```bash
 > docker exec -it aztu-kanban-db psql -U aztu -d aztu_kanban \
 >   -c "DELETE FROM app_user WHERE email = 'admin@aztu.edu.az';"
-> docker compose restart api
+> docker compose up -d          # NOT `restart` - that reuses the old environment
 > ```
+>
+> `docker compose restart` re-runs the existing container with the environment it was
+> created with, so a corrected password in `.env` would not be picked up. `up -d`
+> recreates the container when `.env` has changed.
 
 Real credentials belong in `.env`, which is git-ignored — never in `.env.example`,
 `application.yml` or `docker-compose.yml`.
 
-> `.env` is parsed by Docker Compose, **not** by a shell. Values may contain `!`, `&`
-> and spaces as-is. Do not `source .env` / `set -a; . .env` in bash — a value such as
-> `Pa55word!&` would be cut at the `&` and the rest run as a background command.
+> `.env` is parsed by Docker Compose, **not** by a shell. `!`, `&` and spaces are safe
+> as-is. A literal `$` must be doubled (`$$`) — quoting does **not** stop Compose from
+> interpolating `$VAR`. And never `source .env` / `set -a; . .env` in bash: a value such
+> as `Pa55word!&` would be cut at the `&` and the rest run as a background command.
 
 ## API overview
 
