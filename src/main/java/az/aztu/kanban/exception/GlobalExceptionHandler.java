@@ -7,10 +7,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -65,6 +71,48 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest()
                 .body(ApiError.of(400, "Validation Failed", "Please check the submitted values.",
                         request.getRequestURI(), fieldErrors));
+    }
+
+    /** An unknown URL is a 404, not a server error - and must not log a stack trace. */
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<ApiError> handleUnknownRoute(Exception ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(404, "Not Found", "No endpoint " + request.getMethod() + " " + request.getRequestURI(),
+                        request.getRequestURI()));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex,
+                                                           HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(ApiError.of(405, "Method Not Allowed",
+                        request.getMethod() + " is not supported on this endpoint.", request.getRequestURI()));
+    }
+
+    /** A bad enum or number in a path variable / query parameter is the caller's mistake. */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                       HttpServletRequest request) {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(400, "Bad Request",
+                        "'" + ex.getValue() + "' is not a valid value for " + ex.getName() + ".",
+                        request.getRequestURI()));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParameter(MissingServletRequestParameterException ex,
+                                                           HttpServletRequest request) {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(400, "Bad Request",
+                        "The '" + ex.getParameterName() + "' parameter is required.", request.getRequestURI()));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException ex,
+                                                         HttpServletRequest request) {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(400, "Bad Request", "The request body could not be read as JSON.",
+                        request.getRequestURI()));
     }
 
     @ExceptionHandler(Exception.class)

@@ -56,12 +56,37 @@ Every setting is an environment variable — see [.env.example](.env.example).
 | `FRONTEND_URL` | `http://localhost:3000` | Used to build the links inside e-mails |
 | `MAIL_ENABLED` | `false` | When `false` e-mails are only logged, never sent |
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | Gmail SMTP | SMTP credentials |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `admin@aztu.edu.az` / `Admin123!` | Bootstrap admin, created on first start |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_FULL_NAME` | `admin@aztu.edu.az` / `Admin123!` | First bootstrap admin |
+| `ADMIN2_*` / `ADMIN3_*` | empty | Two more optional bootstrap admins — skipped when blank |
 | `SEED_DEMO_DATA` | `true` | Seeds 3 platforms, 4 boards and demo tasks on an empty database |
 | `REMINDERS_CRON` | `0 0 8 * * *` | Daily deadline-reminder job (Asia/Baku) |
 
-> Change `ADMIN_PASSWORD` **before** the first start — it is only applied while the
-> account does not exist yet.
+### Bootstrap administrators
+
+Up to **three** administrator accounts are created when the application boots
+(`ADMIN_*`, `ADMIN2_*`, `ADMIN3_*`). Slots with a blank e-mail or password are skipped,
+and duplicate addresses are ignored with a warning.
+
+* An account that **does not exist** is created as `ADMIN` with the configured password.
+* An account that **already exists** is never overwritten — its password is left alone.
+  It is only promoted to `ADMIN` and reactivated if it was not an administrator yet.
+
+> Set the passwords **before the first start**. Because existing accounts are never
+> overwritten, changing `ADMIN_PASSWORD` later has no effect. To recover from a typo,
+> either sign in with another administrator and use *Users → reset password*, or delete
+> that row and restart:
+> ```bash
+> docker exec -it aztu-kanban-db psql -U aztu -d aztu_kanban \
+>   -c "DELETE FROM app_user WHERE email = 'admin@aztu.edu.az';"
+> docker compose restart api
+> ```
+
+Real credentials belong in `.env`, which is git-ignored — never in `.env.example`,
+`application.yml` or `docker-compose.yml`.
+
+> `.env` is parsed by Docker Compose, **not** by a shell. Values may contain `!`, `&`
+> and spaces as-is. Do not `source .env` / `set -a; . .env` in bash — a value such as
+> `Pa55word!&` would be cut at the `&` and the rest run as a background command.
 
 ## API overview
 

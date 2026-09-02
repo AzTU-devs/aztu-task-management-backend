@@ -51,6 +51,12 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@aztu.edu.az}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
       ADMIN_FULL_NAME: ${ADMIN_FULL_NAME:-AzTU Administrator}
+      ADMIN2_EMAIL: ${ADMIN2_EMAIL:-}
+      ADMIN2_PASSWORD: ${ADMIN2_PASSWORD:-}
+      ADMIN2_FULL_NAME: ${ADMIN2_FULL_NAME:-AzTU Administrator}
+      ADMIN3_EMAIL: ${ADMIN3_EMAIL:-}
+      ADMIN3_PASSWORD: ${ADMIN3_PASSWORD:-}
+      ADMIN3_FULL_NAME: ${ADMIN3_FULL_NAME:-AzTU Administrator}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:

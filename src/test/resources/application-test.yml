@@ -22,9 +22,23 @@ app:
     enabled: false
   seed:
     demo-data: true
-  admin:
-    email: admin@aztu.edu.az
-    password: Admin123!
+  bootstrap:
+    admins:
+      - email: admin@aztu.edu.az
+        password: "Admin123!"
+        full-name: AzTU Administrator
+      # a second slot, plus punctuation that shells and YAML like to mangle
+      - email: Second.Admin@AzTU.edu.az
+        password: "Sec0nd!&pass"
+        full-name: Second Administrator
+      # duplicate of the first entry - must be ignored, not applied twice
+      - email: admin@aztu.edu.az
+        password: "DifferentPassword1!"
+        full-name: Duplicate
+      # empty slot - must be skipped
+      - email: ""
+        password: ""
+        full-name: Unused
 
 logging:
   level:

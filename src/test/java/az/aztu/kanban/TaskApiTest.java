@@ -103,6 +103,37 @@ class TaskApiTest {
     }
 
     @Test
+    void clientMistakesAreClientErrors() throws Exception {
+        // an unknown URL must be a 404, never a 500 with a logged stack trace
+        mockMvc.perform(get("/api/does-not-exist").header("Authorization", bearer()))
+                .andExpect(status().isNotFound());
+
+        // a bad enum in a query parameter is the caller's mistake
+        mockMvc.perform(get("/api/tasks?priority=NOT_A_PRIORITY").header("Authorization", bearer()))
+                .andExpect(status().isBadRequest());
+
+        // malformed JSON body
+        mockMvc.perform(post("/api/tasks")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{not json"))
+                .andExpect(status().isBadRequest());
+
+        // wrong verb on a real endpoint
+        mockMvc.perform(patch("/api/platforms").header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    void configurationEndpointsAreNotExposed() throws Exception {
+        mockMvc.perform(get("/actuator/env").header("Authorization", bearer()))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/actuator/configprops").header("Authorization", bearer()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void healthIsUpWithoutSmtpCredentials() throws Exception {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())

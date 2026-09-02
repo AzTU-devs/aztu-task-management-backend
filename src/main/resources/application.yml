@@ -82,10 +82,26 @@ app:
     from-name: ${MAIL_FROM_NAME:AzTU Kanban}
   frontend:
     url: ${FRONTEND_URL:http://localhost:3000}
-  admin:
-    email: ${ADMIN_EMAIL:admin@aztu.edu.az}
-    password: ${ADMIN_PASSWORD:Admin123!}
-    full-name: ${ADMIN_FULL_NAME:AzTU Administrator}
+  bootstrap:
+    # Administrators created on the first start. Slots with an empty e-mail or
+    # password are skipped, so an installation can use one, two or three of them.
+    # Never put real passwords here - set them through the environment / .env file.
+    admins:
+      - email: ${ADMIN_EMAIL:admin@aztu.edu.az}
+        password: ${ADMIN_PASSWORD:Admin123!}
+        full-name: ${ADMIN_FULL_NAME:AzTU Administrator}
+        title: System Administrator
+        department: IT Department
+      - email: ${ADMIN2_EMAIL:}
+        password: ${ADMIN2_PASSWORD:}
+        full-name: ${ADMIN2_FULL_NAME:AzTU Administrator}
+        title: System Administrator
+        department: IT Department
+      - email: ${ADMIN3_EMAIL:}
+        password: ${ADMIN3_PASSWORD:}
+        full-name: ${ADMIN3_FULL_NAME:AzTU Administrator}
+        title: System Administrator
+        department: IT Department
   seed:
     demo-data: ${SEED_DEMO_DATA:true}
   reminders:

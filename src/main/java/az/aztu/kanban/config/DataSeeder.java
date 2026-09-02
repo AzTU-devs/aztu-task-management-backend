@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -40,15 +41,7 @@ public class DataSeeder implements CommandLineRunner {
     private final BoardRepository boardRepository;
     private final TaskRepository taskRepository;
     private final PasswordEncoder passwordEncoder;
-
-    @Value("${app.admin.email}")
-    private String adminEmail;
-
-    @Value("${app.admin.password}")
-    private String adminPassword;
-
-    @Value("${app.admin.full-name}")
-    private String adminFullName;
+    private final BootstrapProperties bootstrapProperties;
 
     @Value("${app.seed.demo-data}")
     private boolean seedDemoData;
@@ -56,20 +49,12 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        User admin = userRepository.findByEmailIgnoreCase(adminEmail).orElse(null);
-        if (admin == null) {
-            admin = new User();
-            admin.setEmail(adminEmail.toLowerCase());
-            admin.setFullName(adminFullName);
-            admin.setPasswordHash(passwordEncoder.encode(adminPassword));
-            admin.setRole(Role.ADMIN);
-            admin.setTitle("System Administrator");
-            admin.setDepartment("IT Department");
-            admin.setAvatarColor("#6366f1");
-            admin.setActive(true);
-            userRepository.save(admin);
-            log.info("Bootstrap administrator created: {}", adminEmail);
+        List<User> admins = ensureBootstrapAdmins();
+        if (admins.isEmpty()) {
+            log.error("No usable bootstrap administrator is configured - set ADMIN_EMAIL and ADMIN_PASSWORD.");
+            return;
         }
+        User admin = admins.get(0);
 
         if (!seedDemoData || platformRepository.count() > 0) {
             return;
@@ -109,6 +94,50 @@ public class DataSeeder implements CommandLineRunner {
 
         log.info("Demo workspace ready: {} platforms, {} boards, {} tasks",
                 platformRepository.count(), boardRepository.count(), taskRepository.count());
+    }
+
+    /**
+     * Creates every configured administrator that does not exist yet. An account that
+     * already exists is never overwritten - its password stays untouched - but it is
+     * promoted to ADMIN and reactivated if it was not an administrator before.
+     */
+    private List<User> ensureBootstrapAdmins() {
+        List<User> admins = new ArrayList<>();
+        Set<String> handled = new LinkedHashSet<>();
+
+        for (BootstrapProperties.AdminAccount account : bootstrapProperties.usableAdmins()) {
+            String email = account.normalizedEmail();
+            if (!handled.add(email)) {
+                log.warn("Bootstrap administrator {} is configured more than once - ignoring the duplicate.", email);
+                continue;
+            }
+
+            User existing = userRepository.findByEmailIgnoreCase(email).orElse(null);
+            if (existing != null) {
+                if (existing.getRole() != Role.ADMIN || !existing.isActive()) {
+                    existing.setRole(Role.ADMIN);
+                    existing.setActive(true);
+                    userRepository.save(existing);
+                    log.info("Existing account promoted to administrator: {}", email);
+                }
+                admins.add(existing);
+                continue;
+            }
+
+            User admin = new User();
+            admin.setEmail(email);
+            admin.setFullName(account.displayName());
+            admin.setPasswordHash(passwordEncoder.encode(account.getPassword()));
+            admin.setRole(Role.ADMIN);
+            admin.setTitle(account.getTitle());
+            admin.setDepartment(account.getDepartment());
+            admin.setAvatarColor("#6366f1");
+            admin.setActive(true);
+            userRepository.save(admin);
+            admins.add(admin);
+            log.info("Bootstrap administrator created: {}", email);
+        }
+        return admins;
     }
 
     private User createUser(String email, String fullName, Role role, String title, String department, String color) {
