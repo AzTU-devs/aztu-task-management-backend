@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -53,7 +54,7 @@ public final class TaskDtos {
                     due,
                     overdue,
                     task.getStoryPoints(),
-                    task.getLabels(),
+                    new LinkedHashSet<>(task.getLabels()),
                     commentCount,
                     task.getUpdatedAt());
         }

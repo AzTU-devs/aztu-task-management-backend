@@ -403,7 +403,7 @@ public class TaskService {
                 UserSummary.from(task.getAssignee()),
                 UserSummary.from(task.getReporter()),
                 task.getWatchers().stream().map(UserSummary::from).toList(),
-                task.getLabels(),
+                new LinkedHashSet<>(task.getLabels()),
                 task.getStartDate(),
                 due,
                 overdue,

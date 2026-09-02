@@ -58,6 +58,11 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    # The SMTP probe reports DOWN whenever credentials are absent or wrong, which
+    # would fail the container healthcheck even though the API is perfectly fine.
+    mail:
+      enabled: false
 
 springdoc:
   swagger-ui:
