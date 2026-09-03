@@ -17,7 +17,11 @@ import az.aztu.kanban.domain.Activity;
 import az.aztu.kanban.domain.Board;
 import az.aztu.kanban.domain.Platform;
 import az.aztu.kanban.domain.Task;
+import az.aztu.kanban.domain.ArchitectureDiagram;
+import az.aztu.kanban.domain.ArchitectureNode;
 import az.aztu.kanban.repository.ActivityRepository;
+import az.aztu.kanban.repository.ArchitectureDiagramRepository;
+import az.aztu.kanban.repository.ArchitectureNodeRepository;
 import az.aztu.kanban.repository.BoardRepository;
 import az.aztu.kanban.repository.NotificationRepository;
 import az.aztu.kanban.repository.PlatformRepository;
@@ -50,6 +54,8 @@ public class UserService {
     private final PlatformRepository platformRepository;
     private final ActivityRepository activityRepository;
     private final TaskCommentRepository commentRepository;
+    private final ArchitectureDiagramRepository diagramRepository;
+    private final ArchitectureNodeRepository archNodeRepository;
     private final NotificationRepository notificationRepository;
     private final PasswordEncoder passwordEncoder;
     private final PasswordGenerator passwordGenerator;
@@ -202,6 +208,14 @@ public class UserService {
         reported.forEach(task -> task.setReporter(null));
         taskRepository.saveAll(watched);
         taskRepository.saveAll(reported);
+
+        List<ArchitectureDiagram> ownedDiagrams = diagramRepository.findAllByOwnerId(id);
+        ownedDiagrams.forEach(diagram -> diagram.setOwner(null));
+        diagramRepository.saveAll(ownedDiagrams);
+
+        List<ArchitectureNode> authoredNotes = archNodeRepository.findAllByAuthorId(id);
+        authoredNotes.forEach(node -> node.setAuthor(null));
+        archNodeRepository.saveAll(authoredNotes);
 
         List<Activity> activities = activityRepository.findAllByActorId(id);
         activities.forEach(activity -> activity.setActor(null));

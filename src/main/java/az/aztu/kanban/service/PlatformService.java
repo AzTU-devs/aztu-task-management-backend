@@ -7,6 +7,7 @@ import az.aztu.kanban.dto.PlatformDtos.PlatformRequest;
 import az.aztu.kanban.exception.BadRequestException;
 import az.aztu.kanban.exception.ConflictException;
 import az.aztu.kanban.exception.NotFoundException;
+import az.aztu.kanban.repository.ArchitectureDiagramRepository;
 import az.aztu.kanban.repository.BoardRepository;
 import az.aztu.kanban.repository.PlatformRepository;
 import az.aztu.kanban.repository.TaskRepository;
@@ -23,6 +24,7 @@ public class PlatformService {
 
     private final PlatformRepository platformRepository;
     private final BoardRepository boardRepository;
+    private final ArchitectureDiagramRepository diagramRepository;
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
 
@@ -73,6 +75,13 @@ public class PlatformService {
         if (boards > 0) {
             throw new BadRequestException(
                     "This platform still holds " + boards + " board(s). Delete or move them first.");
+        }
+        // Diagrams point at the platform with a foreign key and there is no cascade for them,
+        // so without this guard the delete surfaces as a raw constraint violation and a 500.
+        long diagrams = diagramRepository.countByPlatformId(id);
+        if (diagrams > 0) {
+            throw new BadRequestException(
+                    "This platform still holds " + diagrams + " architecture diagram(s). Delete or move them first.");
         }
         platformRepository.delete(platform);
     }

@@ -125,6 +125,36 @@ Full interactive documentation: `http://<host>:<API_PORT>/swagger-ui.html`.
 
 `GET /actuator/health` — used by the container healthcheck and by any reverse proxy.
 
+## Architecture diagrams
+
+Alongside the boards, the API stores **architecture models**: a canvas of labelled rectangles
+(components, services, databases, external systems and notes) and the connections between them.
+
+```
+ArchitectureDiagram   name, status (DRAFT/IN_REVIEW/APPROVED/DEPRECATED), platform, owner
+  ├── ArchitectureNode   kind, technology, position/size, plus the note fields
+  │                      (noteKind, noteStatus, decidedOn, author) when kind = NOTE
+  └── ArchitectureEdge   source -> target, label, technology, dashed
+```
+
+A NOTE node doubles as the decision record, so an architecture decision lives on the canvas
+next to what it describes instead of in a separate document.
+
+| Method | Path | Access |
+| --- | --- | --- |
+| `GET` | `/api/architecture/diagrams` (optional `?platformId=`) | authenticated |
+| `GET` | `/api/architecture/diagrams/{id}` | authenticated — the whole canvas in one call |
+| `POST`/`PUT`/`DELETE` | `/api/architecture/diagrams…` | **ADMIN** |
+| `POST` | `/api/architecture/diagrams/{id}/nodes`, `/edges` | **ADMIN** |
+| `PUT`/`DELETE` | `/api/architecture/nodes/{id}`, `/api/architecture/edges/{id}` | **ADMIN** |
+| `PATCH` | `/api/architecture/nodes/{id}/position` | **ADMIN** — the drag path |
+
+Positions are snapped to a 10-unit grid and clamped inside a 4000×2600 world by
+`ArchitectureGeometry`, whose rules the frontend mirrors exactly in `src/lib/architecture.ts`.
+If the two ever drift apart, every drag ends with the rectangle visibly jumping.
+
+> Deleting a platform is now refused while it still holds diagrams, as well as boards.
+
 ## Removing the demo content
 
 `SEED_DEMO_DATA=true` fills an empty database with 3 platforms, 4 boards, sample tasks

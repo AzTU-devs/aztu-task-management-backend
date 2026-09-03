@@ -1,6 +1,13 @@
 package az.aztu.kanban.config;
 
+import az.aztu.kanban.domain.ArchNodeKind;
+import az.aztu.kanban.domain.ArchNoteKind;
+import az.aztu.kanban.domain.ArchNoteStatus;
+import az.aztu.kanban.domain.ArchitectureDiagram;
+import az.aztu.kanban.domain.ArchitectureEdge;
+import az.aztu.kanban.domain.ArchitectureNode;
 import az.aztu.kanban.domain.Board;
+import az.aztu.kanban.domain.DiagramStatus;
 import az.aztu.kanban.domain.BoardColumn;
 import az.aztu.kanban.domain.ColumnCategory;
 import az.aztu.kanban.domain.Platform;
@@ -9,6 +16,9 @@ import az.aztu.kanban.domain.Role;
 import az.aztu.kanban.domain.Task;
 import az.aztu.kanban.domain.TaskType;
 import az.aztu.kanban.domain.User;
+import az.aztu.kanban.repository.ArchitectureDiagramRepository;
+import az.aztu.kanban.repository.ArchitectureEdgeRepository;
+import az.aztu.kanban.repository.ArchitectureNodeRepository;
 import az.aztu.kanban.repository.BoardRepository;
 import az.aztu.kanban.repository.PlatformRepository;
 import az.aztu.kanban.repository.TaskRepository;
@@ -41,6 +51,9 @@ public class DataSeeder implements CommandLineRunner {
     private final PlatformRepository platformRepository;
     private final BoardRepository boardRepository;
     private final TaskRepository taskRepository;
+    private final ArchitectureDiagramRepository diagramRepository;
+    private final ArchitectureNodeRepository nodeRepository;
+    private final ArchitectureEdgeRepository edgeRepository;
     private final PasswordEncoder passwordEncoder;
     private final BootstrapProperties bootstrapProperties;
     private final PasswordGenerator passwordGenerator;
@@ -58,7 +71,15 @@ public class DataSeeder implements CommandLineRunner {
         }
         User admin = admins.get(0);
 
-        if (!seedDemoData || platformRepository.count() > 0) {
+        if (!seedDemoData) {
+            return;
+        }
+
+        // The architecture seed has its OWN guard rather than sitting after the workspace check.
+        // An installation that already has platforms skips the workspace block entirely, and the
+        // example diagram would then never appear on any real installation.
+        if (platformRepository.count() > 0) {
+            seedArchitecture(admin);
             return;
         }
 
@@ -96,6 +117,7 @@ public class DataSeeder implements CommandLineRunner {
 
         log.info("Demo workspace ready: {} platforms, {} boards, {} tasks",
                 platformRepository.count(), boardRepository.count(), taskRepository.count());
+        seedArchitecture(admin);
         log.info("Demo people were created with random passwords and cannot be signed in as. "
                 + "Use Users -> reset password to issue one, or set SEED_DEMO_DATA=false to skip them.");
     }
@@ -149,6 +171,86 @@ public class DataSeeder implements CommandLineRunner {
             log.info("Bootstrap administrator created: {}", email);
         }
         return admins;
+    }
+
+    /** One worked example so the Architecture page is not empty on the first visit. */
+    private void seedArchitecture(User author) {
+        if (diagramRepository.count() > 0) {
+            return;
+        }
+        Platform platform = platformRepository.findAll().stream().findFirst().orElse(null);
+        if (platform == null) {
+            return;
+        }
+
+        ArchitectureDiagram diagram = new ArchitectureDiagram();
+        diagram.setName("Student Portal architecture");
+        diagram.setDescription("How the student-facing portal is put together and what it depends on.");
+        diagram.setPlatform(platform);
+        diagram.setOwner(author);
+        diagram.setStatus(DiagramStatus.APPROVED);
+        diagramRepository.save(diagram);
+
+        ArchitectureNode portal = archNode(diagram, "Student Portal", ArchNodeKind.COMPONENT,
+                "Next.js", "Where students check grades, schedules and documents.", 120, 120, 240, 110);
+        ArchitectureNode gateway = archNode(diagram, "API Gateway", ArchNodeKind.SERVICE,
+                "Spring Cloud Gateway", null, 520, 120, 240, 110);
+        ArchitectureNode exams = archNode(diagram, "Exam Service", ArchNodeKind.SERVICE,
+                "Spring Boot 3.3 / Java 21", null, 920, 40, 240, 110);
+        ArchitectureNode identity = archNode(diagram, "Identity Service", ArchNodeKind.SERVICE,
+                "Keycloak", null, 920, 220, 240, 110);
+        ArchitectureNode database = archNode(diagram, "Academic database", ArchNodeKind.DATABASE,
+                "PostgreSQL 16", null, 1320, 130, 240, 110);
+        ArchitectureNode ministry = archNode(diagram, "Ministry reporting", ArchNodeKind.EXTERNAL,
+                "SOAP", "Statutory reporting endpoint outside the university.", 1320, 340, 240, 110);
+
+        ArchitectureNode note = archNode(diagram, "One gateway in front of every service",
+                ArchNodeKind.NOTE, null,
+                "Students reach exactly one public host. Authentication and rate limiting live in "
+                        + "the gateway so no individual service has to repeat them.",
+                120, 340, 300, 150);
+        note.setNoteKind(ArchNoteKind.DECISION);
+        note.setNoteStatus(ArchNoteStatus.ACCEPTED);
+        note.setDecidedOn(LocalDate.now().minusMonths(2));
+        note.setAuthor(author);
+        nodeRepository.save(note);
+
+        archEdge(diagram, portal, gateway, "all requests", "HTTPS/JSON", false);
+        archEdge(diagram, gateway, exams, "results, timetables", "HTTPS/JSON", false);
+        archEdge(diagram, gateway, identity, "sign in", "OIDC", false);
+        archEdge(diagram, exams, database, "reads and writes", "JDBC", false);
+        archEdge(diagram, identity, database, "accounts", "JDBC", false);
+        archEdge(diagram, exams, ministry, "nightly export", "SOAP", true);
+
+        log.info("Seeded the example architecture diagram.");
+    }
+
+    private ArchitectureNode archNode(ArchitectureDiagram diagram, String name, ArchNodeKind kind,
+                                      String technology, String description,
+                                      int x, int y, int width, int height) {
+        ArchitectureNode node = new ArchitectureNode();
+        node.setDiagram(diagram);
+        node.setName(name);
+        node.setKind(kind);
+        node.setTechnology(technology);
+        node.setDescription(description);
+        node.setX(x);
+        node.setY(y);
+        node.setWidth(width);
+        node.setHeight(height);
+        return nodeRepository.save(node);
+    }
+
+    private void archEdge(ArchitectureDiagram diagram, ArchitectureNode source, ArchitectureNode target,
+                          String label, String technology, boolean dashed) {
+        ArchitectureEdge edge = new ArchitectureEdge();
+        edge.setDiagram(diagram);
+        edge.setSourceNode(source);
+        edge.setTargetNode(target);
+        edge.setLabel(label);
+        edge.setTechnology(technology);
+        edge.setDashed(dashed);
+        edgeRepository.save(edge);
     }
 
     private User createUser(String email, String fullName, Role role, String title, String department, String color) {
