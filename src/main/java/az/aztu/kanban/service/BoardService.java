@@ -163,18 +163,23 @@ public class BoardService {
                     .orElseThrow(() -> NotFoundException.of("User", request.leadId())));
         }
 
-        Set<User> members = new LinkedHashSet<>();
+        // Collect the ids first: the creator arrives detached from the request principal
+        // while the others are loaded here, so de-duplicating objects would not be enough.
+        Set<Long> memberIds = new LinkedHashSet<>();
         if (request.memberIds() != null) {
-            for (Long userId : request.memberIds()) {
-                members.add(userRepository.findById(userId)
-                        .orElseThrow(() -> NotFoundException.of("User", userId)));
-            }
+            memberIds.addAll(request.memberIds());
         }
         if (board.getLead() != null) {
-            members.add(board.getLead());
+            memberIds.add(board.getLead().getId());
         }
         if (creator != null) {
-            members.add(creator);
+            memberIds.add(creator.getId());
+        }
+
+        Set<User> members = new LinkedHashSet<>();
+        for (Long userId : memberIds) {
+            members.add(userRepository.findById(userId)
+                    .orElseThrow(() -> NotFoundException.of("User", userId)));
         }
         board.setMembers(members);
 

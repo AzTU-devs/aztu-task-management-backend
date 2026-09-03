@@ -72,6 +72,34 @@ public class User {
         this.updatedAt = Instant.now();
     }
 
+    /**
+     * Two User objects are the same person when they carry the same id.
+     *
+     * Without this a Set<User> falls back to object identity, and the same person loaded
+     * twice - once detached from the JWT filter, once managed inside the request
+     * transaction - counts as two members. That is how board_member ended up with two
+     * rows for one (board_id, user_id).
+     *
+     * instanceof rather than getClass() so a Hibernate proxy still compares equal, and a
+     * constant hashCode so an entity whose id is assigned after insert does not move
+     * bucket inside a set it is already in.
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof User user)) {
+            return false;
+        }
+        return id != null && id.equals(user.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return User.class.hashCode();
+    }
+
     public String initials() {
         if (fullName == null || fullName.isBlank()) {
             return "?";

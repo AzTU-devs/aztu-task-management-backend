@@ -4,6 +4,9 @@ import az.aztu.kanban.domain.User;
 import az.aztu.kanban.dto.PageResponse;
 import az.aztu.kanban.dto.TaskDtos.TaskCard;
 import az.aztu.kanban.domain.ColumnCategory;
+import az.aztu.kanban.dto.BoardDtos;
+import az.aztu.kanban.dto.UserDtos.UserSummary;
+import az.aztu.kanban.repository.PlatformRepository;
 import az.aztu.kanban.domain.Priority;
 import az.aztu.kanban.domain.TaskType;
 import az.aztu.kanban.repository.SearchTerm;
@@ -22,6 +25,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -63,6 +67,7 @@ class PostgresQueryTest {
     @Autowired BoardService boardService;
     @Autowired DashboardService dashboardService;
     @Autowired UserService userService;
+    @Autowired PlatformRepository platformRepository;
 
     private User admin() {
         return userRepository.findByEmailIgnoreCase("admin@aztu.edu.az").orElseThrow();
@@ -118,6 +123,27 @@ class PostgresQueryTest {
         var page = taskService.search(null, null, null, TaskType.TASK, Priority.MEDIUM,
                 ColumnCategory.TODO, "design", PageRequest.of(0, 25, Sort.by("updatedAt")));
         assertThat(page).isNotNull();
+    }
+
+    /**
+     * The creator arrives from the JWT filter, loaded in its own transaction, so it is a
+     * DETACHED User. The lead and the members are loaded inside this transaction, so they
+     * are MANAGED. Without equals/hashCode on User those are different objects for the
+     * same person, and board_member gets two rows for one (board_id, user_id).
+     */
+    @Test
+    void creatingABoardWhereTheCreatorIsAlsoLeadAndMemberDoesNotDuplicateMembership() {
+        User creator = admin();          // detached, exactly like the request principal
+        Long platformId = platformRepository.findAll().getFirst().getId();
+
+        var request = new BoardDtos.BoardRequest(
+                "Duplicate Membership Check", "DUPX", "created by someone who is also the lead",
+                null, platformId, creator.getId(), List.of(creator.getId()), null);
+
+        var board = boardService.create(request, creator);
+
+        assertThat(board.members()).extracting(UserSummary::id).containsExactly(creator.getId());
+        assertThat(board.members()).hasSize(1);
     }
 
     @Test
