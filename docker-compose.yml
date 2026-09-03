@@ -10,7 +10,8 @@ services:
     volumes:
       - kanban_db_data:/var/lib/postgresql/data
     ports:
-      - "${DB_EXPOSED_PORT:-5433}:5432"
+      # Bound to loopback by default: the database is never reachable from the internet.
+      - "${BIND_ADDRESS:-127.0.0.1}:${DB_EXPOSED_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-aztu} -d ${DB_NAME:-aztu_kanban}"]
       interval: 10s
@@ -60,9 +61,13 @@ services:
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:
-      - "${API_PORT:-8080}:8080"
+      # Bound to loopback by default - only the reverse proxy on this host may reach it.
+      - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8080}:8080"
     networks:
       - kanban
+      # Shared with the frontend stack so the web container can reach this API
+      # directly by name, without going back out through the public internet.
+      - shared
 
 volumes:
   kanban_db_data:
@@ -72,3 +77,6 @@ networks:
   kanban:
     name: aztu-kanban-net
     driver: bridge
+  shared:
+    name: ${SHARED_NETWORK:-aztu-kanban-shared}
+    external: true
