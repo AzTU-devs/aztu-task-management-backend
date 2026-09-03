@@ -125,6 +125,29 @@ Full interactive documentation: `http://<host>:<API_PORT>/swagger-ui.html`.
 
 `GET /actuator/health` — used by the container healthcheck and by any reverse proxy.
 
+## Removing the demo content
+
+`SEED_DEMO_DATA=true` fills an empty database with 3 platforms, 4 boards, sample tasks
+and 3 demo people. To clear them from a running installation:
+
+```bash
+# 1. turn seeding off FIRST - the seeder refills an empty database on every start
+sed -i 's/^SEED_DEMO_DATA=.*/SEED_DEMO_DATA=false/' .env
+docker compose up -d          # `restart` would reuse the old environment
+
+# 2. delete the seeded rows (anything you created yourself is left alone)
+ADMIN_EMAIL=you@aztu.edu.az ADMIN_PASSWORD='...' \
+  python3 scripts/remove-demo-data.py
+```
+
+The script matches only the seeded keys — platforms `EDU`/`RND`/`OPS` and boards
+`LMS`/`SP`/`GRA`/`INF` — and deletes boards before platforms, since a platform holding
+boards cannot be removed. Add `REMOVE_DEMO_USERS=true` to also delete the three demo
+people (Nigar, Elvin, Leyla).
+
+> Order matters. If you delete every platform while `SEED_DEMO_DATA` is still `true`,
+> the next restart sees an empty database and seeds it all over again.
+
 ## Notes
 
 * Schema is managed by Hibernate (`DDL_AUTO=update`). Set `DDL_AUTO=validate` and add
