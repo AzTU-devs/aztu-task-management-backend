@@ -104,6 +104,17 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+        <!--
+          A real PostgreSQL for the tests that must match production exactly.
+          H2 accepts untyped null parameters that PostgreSQL rejects, which is how
+          `function lower(bytea) does not exist` reached the server unnoticed.
+        -->
+        <dependency>
+            <groupId>io.zonky.test</groupId>
+            <artifactId>embedded-postgres</artifactId>
+            <version>2.0.7</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

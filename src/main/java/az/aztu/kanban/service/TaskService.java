@@ -21,6 +21,7 @@ import az.aztu.kanban.exception.NotFoundException;
 import az.aztu.kanban.repository.ActivityRepository;
 import az.aztu.kanban.repository.BoardColumnRepository;
 import az.aztu.kanban.repository.BoardRepository;
+import az.aztu.kanban.repository.SearchTerm;
 import az.aztu.kanban.repository.TaskCommentRepository;
 import az.aztu.kanban.repository.TaskRepository;
 import az.aztu.kanban.repository.UserRepository;
@@ -76,7 +77,7 @@ public class TaskService {
                                          Priority priority, ColumnCategory category, String search,
                                          Pageable pageable) {
         Page<Task> page = taskRepository.search(boardId, assigneeId, reporterId, type, priority, category,
-                (search == null || search.isBlank()) ? null : search.trim(), pageable);
+                SearchTerm.like(search), pageable);
         return PageResponse.of(page, task -> TaskCard.from(task, commentRepository.countByTaskId(task.getId())));
     }
 

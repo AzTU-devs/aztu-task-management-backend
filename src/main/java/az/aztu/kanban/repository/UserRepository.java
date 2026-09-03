@@ -23,14 +23,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByRole(Role role);
 
+    /** {@code searchPattern} must be a {@link SearchTerm#like(String)} pattern, or null. */
     @Query("""
             SELECT u FROM User u
-            WHERE (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%'))
-                                   OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))
+            WHERE (:search IS NULL OR LOWER(u.fullName) LIKE :search
+                                   OR LOWER(u.email) LIKE :search)
               AND (:role IS NULL OR u.role = :role)
               AND (:active IS NULL OR u.active = :active)
             """)
-    Page<User> search(@Param("search") String search,
+    Page<User> search(@Param("search") String searchPattern,
                       @Param("role") Role role,
                       @Param("active") Boolean active,
                       Pageable pageable);

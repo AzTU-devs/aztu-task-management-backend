@@ -21,6 +21,7 @@ import az.aztu.kanban.repository.ActivityRepository;
 import az.aztu.kanban.repository.BoardRepository;
 import az.aztu.kanban.repository.NotificationRepository;
 import az.aztu.kanban.repository.PlatformRepository;
+import az.aztu.kanban.repository.SearchTerm;
 import az.aztu.kanban.repository.TaskCommentRepository;
 import az.aztu.kanban.repository.TaskRepository;
 import az.aztu.kanban.repository.UserRepository;
@@ -59,8 +60,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public PageResponse<UserDto> search(String search, Role role, Boolean active, Pageable pageable) {
-        String term = (search == null || search.isBlank()) ? null : search.trim();
-        Page<User> page = userRepository.search(term, role, active, pageable);
+        Page<User> page = userRepository.search(SearchTerm.like(search), role, active, pageable);
         return PageResponse.of(page, UserDto::from);
     }
 

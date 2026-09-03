@@ -27,15 +27,15 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
               AND (:assigneeId IS NULL OR t.assignee.id = :assigneeId)
               AND (:type IS NULL OR t.type = :type)
               AND (:priority IS NULL OR t.priority = :priority)
-              AND (:search IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', :search, '%'))
-                                   OR LOWER(t.taskKey) LIKE LOWER(CONCAT('%', :search, '%')))
+              AND (:search IS NULL OR LOWER(t.title) LIKE :search
+                                   OR LOWER(t.taskKey) LIKE :search)
             ORDER BY t.orderIndex ASC
             """)
     List<Task> findForBoard(@Param("boardId") Long boardId,
                             @Param("assigneeId") Long assigneeId,
                             @Param("type") TaskType type,
                             @Param("priority") Priority priority,
-                            @Param("search") String search);
+                            @Param("search") String searchPattern);
 
     List<Task> findAllByBoardColumnIdOrderByOrderIndexAsc(Long columnId);
 
@@ -66,8 +66,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
               AND (:type IS NULL OR t.type = :type)
               AND (:priority IS NULL OR t.priority = :priority)
               AND (:category IS NULL OR t.boardColumn.category = :category)
-              AND (:search IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', :search, '%'))
-                                   OR LOWER(t.taskKey) LIKE LOWER(CONCAT('%', :search, '%')))
+              AND (:search IS NULL OR LOWER(t.title) LIKE :search
+                                   OR LOWER(t.taskKey) LIKE :search)
             """)
     Page<Task> search(@Param("boardId") Long boardId,
                       @Param("assigneeId") Long assigneeId,
@@ -75,7 +75,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
                       @Param("type") TaskType type,
                       @Param("priority") Priority priority,
                       @Param("category") ColumnCategory category,
-                      @Param("search") String search,
+                      @Param("search") String searchPattern,
                       Pageable pageable);
 
     @Query("""

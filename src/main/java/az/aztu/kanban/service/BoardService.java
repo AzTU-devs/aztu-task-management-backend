@@ -24,6 +24,7 @@ import az.aztu.kanban.exception.NotFoundException;
 import az.aztu.kanban.repository.BoardColumnRepository;
 import az.aztu.kanban.repository.BoardRepository;
 import az.aztu.kanban.repository.PlatformRepository;
+import az.aztu.kanban.repository.SearchTerm;
 import az.aztu.kanban.repository.ActivityRepository;
 import az.aztu.kanban.repository.TaskCommentRepository;
 import az.aztu.kanban.repository.TaskRepository;
@@ -108,8 +109,7 @@ public class BoardService {
         Board board = getEntityByKey(boardKey);
         List<BoardColumn> columns = columnRepository.findAllByBoardIdOrderByPositionAsc(board.getId());
         List<Task> tasks = taskRepository.findForBoard(
-                board.getId(), assigneeId, type, priority,
-                (search == null || search.isBlank()) ? null : search.trim());
+                board.getId(), assigneeId, type, priority, SearchTerm.like(search));
 
         Map<Long, Long> commentCounts = new HashMap<>();
         for (Object[] row : commentRepository.countsByBoard(board.getId())) {
