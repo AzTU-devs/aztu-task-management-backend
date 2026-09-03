@@ -32,7 +32,7 @@ comment on tasks.
 
 ```bash
 cp .env.example .env          # then edit the values
-docker compose up -d --build  # API on http://localhost:8080
+docker compose up -d --build  # API on http://localhost:6060
 ```
 
 Without Docker (needs a local PostgreSQL and JDK 21):
@@ -48,7 +48,7 @@ Every setting is an environment variable — see [.env.example](.env.example).
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `API_PORT` | `8080` | Host port published by docker compose |
+| `API_PORT` | `6060` | Host port published by docker compose (container listens on 8080) |
 | `DB_EXPOSED_PORT` | `5433` | Host port for PostgreSQL (set to `""` in production to keep it private) |
 | `JWT_SECRET` | — (**required**) | ≥ 64 random characters: `openssl rand -base64 64 \| tr -d '\n'` |
 | `JWT_EXPIRATION_HOURS` | `24` | Token lifetime |

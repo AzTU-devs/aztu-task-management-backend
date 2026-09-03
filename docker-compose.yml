@@ -62,7 +62,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:
       # Bound to loopback by default - only the reverse proxy on this host may reach it.
-      - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8080}:8080"
+      - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-6060}:8080"
     networks:
       - kanban
       # Shared with the frontend stack so the web container can reach this API
